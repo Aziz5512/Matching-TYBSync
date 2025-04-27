@@ -15,7 +15,7 @@ But : Permettre aux utilisateurs de trouver rapidement des profils qui correspon
 ### Prérequis
 - Python 3.9+
 - pip
-- Git (optionnel)
+
 
  . Cloner le dépôt
 ```bash

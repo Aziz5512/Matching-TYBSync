@@ -17,15 +17,15 @@ But : Permettre aux utilisateurs de trouver rapidement des profils qui correspon
 - pip
 - Git (optionnel)
 
-### 1. Cloner le dépôt
+ . Cloner le dépôt
 ```bash
 git clone https://github.com/votre-repo/matching-cv.git
 cd matching-cv
 
-### 2. Créer l'environnement virtuel
+### . Créer l'environnement virtuel
 bash
 python -m venv cv_env
-### 3. Activer l'environnement
+### . Activer l'environnement
 Windows :
 
 bash
@@ -34,7 +34,7 @@ macOS/Linux :
 
 bash
 source cv_env/bin/activate
-### 4. Installer les dépendances
+### . Installer les dépendances
 bash
 pip install -r requirements.txt
 python -m spacy download fr_core_news_sm

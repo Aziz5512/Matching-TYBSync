@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système de Matching CV</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .skill-badge { margin-right: 5px; }
+        .cv-card { margin-bottom: 15px; }
+        .progress { height: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <h1 class="text-center mb-4">Système de Matching Intelligent</h1>
+        
+        <!-- Section Upload -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h2>1. Ajouter des CV</h2>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nom</label>
+                            <input type="text" class="form-control" id="nom" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Prénom</label>
+                            <input type="text" class="form-control" id="prenom" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">CV (PDF multiples)</label>
+                        <input class="form-control" type="file" id="cvs" multiple accept=".pdf" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Ajouter CV(s)</button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Section Critères -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h2>2. Définir les Critères</h2>
+            </div>
+            <div class="card-body">
+                <div class="row" id="skillsCriteria">
+                    <!-- Généré dynamiquement -->
+                </div>
+                <button id="updateCriteria" class="btn btn-success mt-3">Mettre à jour les Critères</button>
+            </div>
+        </div>
+        
+        <!-- Section Résultats -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h2>3. Classement des CV</h2>
+            </div>
+            <div class="card-body">
+                <div id="rankingResults">
+                    <!-- Résultats dynamiques -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Configuration initiale
+        const allSkills = ['python', 'java', 'javascript', 'c++', 'sql', 'mongodb', 'react', 'angular', 'docker', 'aws', 'machine learning'];
+        
+        // Générer les contrôles de critères
+        function renderSkillControls() {
+            const container = document.getElementById('skillsCriteria');
+            container.innerHTML = '';
+            
+            allSkills.forEach(skill => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 mb-3';
+                col.innerHTML = `
+                    <label>${skill}</label>
+                    <select class="form-select skill-weight" data-skill="${skill}">
+                        <option value="0">Non requis</option>
+                        <option value="1">Important</option>
+                        <option value="2">Essentiel</option>
+                    </select>
+                `;
+                container.appendChild(col);
+            });
+        }
+        
+        // Afficher les résultats
+        function renderRanking(results) {
+            const container = document.getElementById('rankingResults');
+            container.innerHTML = '';
+            
+            if (results.length === 0) {
+                container.innerHTML = '<div class="alert alert-warning">Aucun CV disponible</div>';
+                return;
+            }
+            
+            // Trouver le score maximal pour la normalisation
+            const maxScore = Math.max(...results.map(cv => cv.score), 1);
+            
+            results.forEach((cv, index) => {
+                const card = document.createElement('div');
+                card.className = 'card cv-card';
+                
+                // Générer les badges de compétences
+                let skillsHtml = '';
+                for (const [skill, score] of Object.entries(cv.competences)) {
+                    const badgeClass = score === 2 ? 'bg-success' : 'bg-primary';
+                    skillsHtml += `<span class="badge ${badgeClass} skill-badge">${skill} (${score})</span>`;
+                }
+                
+                // Calcul du pourcentage pour la barre de progression
+                const progressPercent = (cv.score / maxScore) * 100;
+                
+                card.innerHTML = `
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            #${index + 1} - ${cv.prenom} ${cv.nom}
+                            <span class="float-end badge bg-dark">Score: ${cv.score.toFixed(1)}</span>
+                        </h5>
+                        <div class="progress mb-3">
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: ${progressPercent}%" 
+                                 aria-valuenow="${progressPercent}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                        <p class="card-text"><strong>Compétences:</strong></p>
+                        <div class="mb-2">${skillsHtml}</div>
+                        <button class="btn btn-sm btn-outline-secondary view-cv" data-id="${cv.id}">
+                            Voir détails
+                        </button>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        // Envoyer les critères au serveur
+        async function updateCriteria() {
+            const criteria = {};
+            document.querySelectorAll('.skill-weight').forEach(select => {
+                const skill = select.dataset.skill;
+                const weight = parseInt(select.value);
+                if (weight > 0) criteria[skill] = weight;
+            });
+            
+            try {
+                const response = await fetch('/set_criteria', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ criteria })
+                });
+                
+                const data = await response.json();
+                renderRanking(data.ranking);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors de la mise à jour des critères');
+            }
+        }
+        
+        // Envoyer les CV au serveur
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('nom', document.getElementById('nom').value);
+            formData.append('prenom', document.getElementById('prenom').value);
+            
+            const files = document.getElementById('cvs').files;
+            for (let i = 0; i < files.length; i++) {
+                formData.append('cvs', files[i]);
+            }
+            
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                renderRanking(data.ranking);
+                alert(`${data.added} CV(s) ajoutés avec succès!`);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Erreur lors de l\'ajout des CV');
+            }
+        });
+        
+        // Bouton de mise à jour des critères
+        document.getElementById('updateCriteria').addEventListener('click', updateCriteria);
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSkillControls();
+            fetch('/set_criteria', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ criteria: {} })
+            })
+            .then(response => response.json())
+            .then(data => renderRanking(data.ranking));
+        });
+    </script>
+</body>
+</html>

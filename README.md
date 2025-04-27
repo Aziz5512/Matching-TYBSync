@@ -46,6 +46,8 @@ matching-cv/
 ├── uploads/               # Dossier temporaire pour les PDF
 ├── processed/             # Résultats JSON
 └── cv_database.json       # Base de données des CV
+
+suivre cette architecture en creant un dossier templates et un dossier uploads , processed  en cas de probleme merci de nous contacter il est estimer que nous donnons la structure correct bientot
 🚀 Lancement
 bash
 python app.py
